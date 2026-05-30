@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dice Roller</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0b0b0b;
+        --surface: #1a1a1a;
+        --border: #2e2e2e;
+        --text: #e8e6e0;
+        --muted: #888;
+        --accent: #e8e6e0;
+        --pip: #e8e6e0;
+        --radius: 18px;
+        --font: "Georgia", serif;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 1rem;
+        gap: 2rem;
+        user-select: none;
+      }
+
+      h1 {
+        font-size: 1.1rem;
+        font-weight: normal;
+        letter-spacing: 0.25em;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+
+      /* ── Die ─────────────────────────────────────── */
+      #die {
+        width: 140px;
+        height: 140px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        display: grid;
+        grid-template-areas:
+          "a . b"
+          "c d e"
+          "f . g";
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-rows: 1fr 1fr 1fr;
+        padding: 18px;
+        gap: 4px;
+        cursor: pointer;
+        transition: border-color 0.2s;
+        outline: none;
+      }
+      #die:hover {
+        border-color: #555;
+      }
+      #die:focus {
+        border-color: #777;
+      }
+      #die.rolling {
+        animation: tumble 0.5s ease-out;
+      }
+
+      @keyframes tumble {
+        0% {
+          transform: rotate(0deg) scale(1);
+        }
+        20% {
+          transform: rotate(-20deg) scale(1.08);
+        }
+        45% {
+          transform: rotate(22deg) scale(1.1);
+        }
+        65% {
+          transform: rotate(-10deg) scale(1.05);
+        }
+        82% {
+          transform: rotate(6deg) scale(1.02);
+        }
+        100% {
+          transform: rotate(0deg) scale(1);
+        }
+      }
+
+      /* ── Pips ────────────────────────────────────── */
+      .pip {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--pip);
+        align-self: center;
+        justify-self: center;
+        opacity: 0;
+        transition: opacity 0.1s;
+      }
+      .pip.on {
+        opacity: 1;
+      }
+
+      .pip[data-p="a"] {
+        grid-area: a;
+        align-self: start;
+      }
+      .pip[data-p="b"] {
+        grid-area: b;
+        align-self: start;
+        justify-self: end;
+      }
+      .pip[data-p="c"] {
+        grid-area: c;
+      }
+      .pip[data-p="d"] {
+        grid-area: d;
+      }
+      .pip[data-p="e"] {
+        grid-area: e;
+        justify-self: end;
+      }
+      .pip[data-p="f"] {
+        grid-area: f;
+        align-self: end;
+      }
+      .pip[data-p="g"] {
+        grid-area: g;
+        align-self: end;
+        justify-self: end;
+      }
+
+      /* ── Result ──────────────────────────────────── */
+      #result {
+        font-size: 1rem;
+        color: var(--muted);
+        min-height: 1.4rem;
+        text-align: center;
+        letter-spacing: 0.05em;
+        transition: color 0.2s;
+      }
+      #result.flash {
+        color: var(--text);
+      }
+
+      /* ── Roll button ─────────────────────────────── */
+      #roll-btn {
+        padding: 10px 36px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text);
+        font-family: var(--font);
+        font-size: 0.9rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition:
+          border-color 0.2s,
+          background 0.2s;
+      }
+      #roll-btn:hover {
+        border-color: #666;
+        background: #1f1f1f;
+      }
+      #roll-btn:active {
+        transform: scale(0.97);
+      }
+
+      /* ── Hint ────────────────────────────────────── */
+      .hint {
+        font-size: 0.75rem;
+        color: #555;
+        letter-spacing: 0.08em;
+        text-align: center;
+      }
+      kbd {
+        display: inline-block;
+        padding: 1px 6px;
+        border: 1px solid #333;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        color: #777;
+        font-family: monospace;
+      }
+
+      /* ── History ─────────────────────────────────── */
+      #history-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        max-width: 340px;
+      }
+      .hist-label {
+        font-size: 0.7rem;
+        color: #444;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      #history-row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+        min-height: 30px;
+      }
+      .hchip {
+        width: 30px;
+        height: 30px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      /* ── Stats ───────────────────────────────────── */
+      #stats {
+        display: flex;
+        gap: 28px;
+        font-size: 0.8rem;
+        color: #555;
+        letter-spacing: 0.05em;
+      }
+      #stats span {
+        color: var(--muted);
+      }
+
+      /* ── Divider ─────────────────────────────────── */
+      .divider {
+        width: 200px;
+        height: 1px;
+        background: var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🎲 &nbsp; Dice Roller</h1>
+
+    <div id="die" tabindex="0" onclick="roll()" title="Click to roll">
+      <div class="pip" data-p="a" id="pa"></div>
+      <div class="pip" data-p="b" id="pb"></div>
+      <div class="pip" data-p="c" id="pc"></div>
+      <div class="pip" data-p="d" id="pd"></div>
+      <div class="pip" data-p="e" id="pe"></div>
+      <div class="pip" data-p="f" id="pf"></div>
+      <div class="pip" data-p="g" id="pg"></div>
+    </div>
+
+    <div id="result">Press Space, Enter, or click the die</div>
+
+    <button id="roll-btn" onclick="roll()">Roll</button>
+
+    <div class="hint">
+      <kbd>Space</kbd> &nbsp;or&nbsp; <kbd>Enter</kbd> &nbsp;to roll
+    </div>
+
+    <div class="divider"></div>
+
+    <div id="history-wrap">
+      <div class="hist-label">Last 10 rolls</div>
+      <div id="history-row"></div>
+    </div>
+
+    <div id="stats">
+      <div>Rolls: <span id="s-count">0</span></div>
+      <div>Total: <span id="s-total">0</span></div>
+      <div>Avg: <span id="s-avg">—</span></div>
+    </div>
+
+    <script>
+      const FACES = {
+        1: new Set(["d"]),
+        2: new Set(["a", "g"]),
+        3: new Set(["a", "d", "g"]),
+        4: new Set(["a", "b", "f", "g"]),
+        5: new Set(["a", "b", "d", "f", "g"]),
+        6: new Set(["a", "b", "c", "e", "f", "g"]),
+      };
+      const NAMES = ["", "One", "Two", "Three", "Four", "Five", "Six"];
+
+      let rollCount = 0,
+        totalSum = 0,
+        history = [],
+        rolling = false;
+
+      function showFace(n) {
+        const on = FACES[n];
+        ["a", "b", "c", "d", "e", "f", "g"].forEach((p) => {
+          document.getElementById("p" + p).classList.toggle("on", on.has(p));
+        });
+      }
+
+      function roll() {
+        if (rolling) return;
+        rolling = true;
+
+        const die = document.getElementById("die");
+        die.classList.add("rolling");
+
+        let ticks = 0;
+        const iv = setInterval(() => {
+          showFace(Math.floor(Math.random() * 6) + 1);
+          ticks++;
+          if (ticks > 9) {
+            clearInterval(iv);
+            const result = Math.floor(Math.random() * 6) + 1;
+            showFace(result);
+            rollCount++;
+            totalSum += result;
+            history.unshift(result);
+            if (history.length > 10) history.pop();
+
+            const res = document.getElementById("result");
+            res.textContent = `Rolled ${result}  —  ${NAMES[result]}`;
+            res.classList.add("flash");
+            setTimeout(() => res.classList.remove("flash"), 600);
+
+            document.getElementById("s-count").textContent = rollCount;
+            document.getElementById("s-total").textContent = totalSum;
+            document.getElementById("s-avg").textContent = (
+              totalSum / rollCount
+            ).toFixed(1);
+
+            document.getElementById("history-row").innerHTML = history
+              .map((v) => `<div class="hchip">${v}</div>`)
+              .join("");
+
+            setTimeout(() => {
+              die.classList.remove("rolling");
+              rolling = false;
+            }, 100);
+          }
+        }, 50);
+      }
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          roll();
+        }
+      });
+
+      showFace(6);
+      document.getElementById("die").focus();
+    </script>
+  </body>
+</html>
